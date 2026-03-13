@@ -1,2 +1,2 @@
-# fiap-x-microsservice-user-actions
-Repositório de Ações do Usuário
+# fiap-x-microsservice-video-manager
+Repositório de gerenciamento de vídeos e ações do usuário
