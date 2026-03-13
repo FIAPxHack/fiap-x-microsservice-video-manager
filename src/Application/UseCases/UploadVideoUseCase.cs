@@ -62,7 +62,7 @@ public class UploadVideoUseCase : IUploadVideoUseCase
             // 5. Salvar arquivo no storage
             using (var stream = request.Video.OpenReadStream())
             {
-                await _fileStorageService.SaveFileAsync(stream, storedFileName, "uploads");
+                await _fileStorageService.SaveFileAsync(stream, storedFileName, $"uploads/{videoUpload.Id}");
             }
 
             // 6. Salvar metadados no repositório

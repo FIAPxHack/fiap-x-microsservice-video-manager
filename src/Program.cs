@@ -28,7 +28,9 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddDbContext<VideoManagerDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    var connectionString = builder.Environment.IsDevelopment()
+    ? builder.Configuration.GetConnectionString("DefaultConnection")
+    : $"Host={builder.Configuration["DB__Host"]};Port=5432;Database={builder.Configuration["DB__Name"]};Username={builder.Configuration["DB__Username"]};Password={builder.Configuration["DB__Password"]}";
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
         npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory");
@@ -48,19 +50,31 @@ builder.Services.AddDbContext<VideoManagerDbContext>(options =>
 builder.Services.AddSingleton<IAmazonS3>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    var minioConfig = new AmazonS3Config
+    var minioEndpoint = config["MinIO:Endpoint"];
+    
+    // Se MinIO:Endpoint configurado, usar MinIO (dev local)
+    if (!string.IsNullOrEmpty(minioEndpoint))
     {
-        ServiceURL = $"http://{config["MinIO:Endpoint"]}",
-        ForcePathStyle = true,
-        UseHttp = !config.GetValue<bool>("MinIO:UseSSL")
+        var minioConfig = new AmazonS3Config
+        {
+            ServiceURL = $"http://{minioEndpoint}",
+            ForcePathStyle = true,
+            UseHttp = !config.GetValue<bool>("MinIO:UseSSL")
+        };
+        var credentials = new BasicAWSCredentials(
+            config["MinIO:AccessKey"],
+            config["MinIO:SecretKey"]
+        );
+        return new AmazonS3Client(credentials, minioConfig);
+    }
+    
+    // Senão, usar AWS S3 real (produção)
+    var s3Config = new AmazonS3Config
+    {
+        RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(config["Aws:Region"] ?? "us-east-1"),
+        ForcePathStyle = true
     };
-
-    var credentials = new BasicAWSCredentials(
-        config["MinIO:AccessKey"],
-        config["MinIO:SecretKey"]
-    );
-
-    return new AmazonS3Client(credentials, minioConfig);
+    return new AmazonS3Client(s3Config);
 });
 
 builder.Services.AddScoped<IVideoRepository, EFVideoRepository>();
