@@ -52,3 +52,37 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# xUnit / Test Results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Coverage Reports
+CoverageReport/
+coverage/
+*.cobertura.xml
+
+# Application Files
+storage/
+uploads/
+outputs/
+temp/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
