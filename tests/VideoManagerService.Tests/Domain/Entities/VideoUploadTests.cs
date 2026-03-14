@@ -403,4 +403,167 @@ public class VideoUploadTests
         // Assert
         act.Should().Throw<ArgumentNullException>().WithParameterName("filePath");
     }
+
+    // -----------------------------------------------------------------------
+    // Construtor com ID específico
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void ConstructorWithId_ShouldCreateVideoUploadWithSpecifiedId()
+    {
+        // Arrange
+        var id = "custom-id-123";
+        var userId = "user456";
+        var email = "user@example.com";
+        var originalFileName = "video.mp4";
+        var storedFileName = "stored_video.mp4";
+        var filePath = "/storage/video.mp4";
+        var fileSizeBytes = 2048L;
+
+        // Act
+        var video = new VideoUpload(id, userId, email, originalFileName, storedFileName, filePath, fileSizeBytes);
+
+        // Assert
+        video.Id.Should().Be(id);
+        video.UserId.Should().Be(userId);
+        video.OriginalFileName.Should().Be(originalFileName);
+        video.StoredFileName.Should().Be(storedFileName);
+        video.FilePath.Should().Be(filePath);
+        video.FileSizeBytes.Should().Be(fileSizeBytes);
+        video.Status.Should().Be(ProcessingStatus.Pending);
+        video.UploadedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void ConstructorWithId_ShouldThrowArgumentNullException_WhenIdIsNull()
+    {
+        // Act
+        var act = () => new VideoUpload(null!, "user", "email@test.com", "video.mp4", "stored.mp4", "/path", 1000);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("id");
+    }
+
+    [Fact]
+    public void ConstructorWithId_ShouldThrowArgumentNullException_WhenUserIdIsNull()
+    {
+        // Act
+        var act = () => new VideoUpload("id", null!, "email@test.com", "video.mp4", "stored.mp4", "/path", 1000);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("userId");
+    }
+
+    [Fact]
+    public void ConstructorWithId_ShouldThrowArgumentNullException_WhenOriginalFileNameIsNull()
+    {
+        // Act
+        var act = () => new VideoUpload("id", "user", "email@test.com", null!, "stored.mp4", "/path", 1000);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("originalFileName");
+    }
+
+    [Fact]
+    public void ConstructorWithId_ShouldThrowArgumentNullException_WhenStoredFileNameIsNull()
+    {
+        // Act
+        var act = () => new VideoUpload("id", "user", "email@test.com", "video.mp4", null!, "/path", 1000);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("storedFileName");
+    }
+
+    [Fact]
+    public void ConstructorWithId_ShouldThrowArgumentNullException_WhenFilePathIsNull()
+    {
+        // Act
+        var act = () => new VideoUpload("id", "user", "email@test.com", "video.mp4", "stored.mp4", null!, 1000);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("filePath");
+    }
+
+    // -----------------------------------------------------------------------
+    // StartProcessing — estados inválidos
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void StartProcessing_WhenStatusIsCompleted_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var video = new VideoUpload("user", "video.mp4", "stored.mp4", "/path", 1000);
+        video.StartProcessing();
+        video.CompleteProcessing("frames.zip", 10);
+
+        // Act & Assert
+        var act = () => video.StartProcessing();
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*processamento*");
+    }
+
+    [Fact]
+    public void StartProcessing_WhenStatusIsFailed_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var video = new VideoUpload("user", "video.mp4", "stored.mp4", "/path", 1000);
+        video.StartProcessing();
+        video.MarkAsFailed("some error");
+
+        // Act & Assert
+        var act = () => video.StartProcessing();
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*processamento*");
+    }
+
+    // -----------------------------------------------------------------------
+    // CompleteProcessing — estados inválidos
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void CompleteProcessing_WhenStatusIsCompleted_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var video = new VideoUpload("user", "video.mp4", "stored.mp4", "/path", 1000);
+        video.StartProcessing();
+        video.CompleteProcessing("frames.zip", 10);
+
+        // Act & Assert
+        var act = () => video.CompleteProcessing("frames2.zip", 20);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*processamento*");
+    }
+
+    [Fact]
+    public void CompleteProcessing_WhenStatusIsFailed_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var video = new VideoUpload("user", "video.mp4", "stored.mp4", "/path", 1000);
+        video.StartProcessing();
+        video.MarkAsFailed("some error");
+
+        // Act & Assert
+        var act = () => video.CompleteProcessing("frames.zip", 10);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*processamento*");
+    }
+
+    // -----------------------------------------------------------------------
+    // GetProcessingDuration — branch: ProcessingStartedAt nulo, CompletedAt preenchido
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void GetProcessingDuration_ShouldReturnNull_WhenOnlyCompletedAtIsSet()
+    {
+        // Arrange — MarkAsFailed sem StartProcessing: ProcessingCompletedAt é preenchido,
+        // mas ProcessingStartedAt permanece nulo.
+        var video = new VideoUpload("user", "video.mp4", "stored.mp4", "/path", 1000);
+        video.MarkAsFailed("falha imediata");
+
+        // Act
+        var duration = video.GetProcessingDuration();
+
+        // Assert
+        duration.Should().BeNull();
+    }
 }
