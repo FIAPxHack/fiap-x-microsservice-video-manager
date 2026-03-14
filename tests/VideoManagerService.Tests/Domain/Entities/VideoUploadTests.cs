@@ -276,4 +276,131 @@ public class VideoUploadTests
         video.UploadedAt.Should().BeBefore(video.ProcessingStartedAt!.Value);
         video.ProcessingStartedAt!.Value.Should().BeOnOrBefore(video.ProcessingCompletedAt!.Value);
     }
+
+    [Theory]
+    [InlineData("video.mp4", true)]
+    [InlineData("video.avi", true)]
+    [InlineData("video.mov", true)]
+    [InlineData("video.mkv", true)]
+    [InlineData("video.wmv", true)]
+    [InlineData("video.flv", true)]
+    [InlineData("video.webm", true)]
+    [InlineData("VIDEO.MP4", true)]
+    [InlineData("VIDEO.AVI", true)]
+    [InlineData("document.pdf", false)]
+    [InlineData("image.jpg", false)]
+    [InlineData("file.txt", false)]
+    [InlineData("file", false)]
+    public void HasValidVideoExtension_ShouldValidateCorrectly(string fileName, bool expectedResult)
+    {
+        // Arrange
+        var video = new VideoUpload("user", fileName, "stored.mp4", "/path", 1000);
+
+        // Act
+        var result = video.HasValidVideoExtension();
+
+        // Assert
+        result.Should().Be(expectedResult);
+    }
+
+    [Fact]
+    public void GetProcessingDuration_ShouldReturnNull_WhenNotStarted()
+    {
+        // Arrange
+        var video = new VideoUpload("user", "video.mp4", "stored.mp4", "/path", 1000);
+
+        // Act
+        var duration = video.GetProcessingDuration();
+
+        // Assert
+        duration.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetProcessingDuration_ShouldReturnNull_WhenStartedButNotCompleted()
+    {
+        // Arrange
+        var video = new VideoUpload("user", "video.mp4", "stored.mp4", "/path", 1000);
+        video.StartProcessing();
+
+        // Act
+        var duration = video.GetProcessingDuration();
+
+        // Assert
+        duration.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetProcessingDuration_ShouldReturnTimeSpan_WhenCompleted()
+    {
+        // Arrange
+        var video = new VideoUpload("user", "video.mp4", "stored.mp4", "/path", 1000);
+        video.StartProcessing();
+        Thread.Sleep(100); // Pequeno delay para garantir diferença de tempo
+        video.CompleteProcessing("frames.zip", 100);
+
+        // Act
+        var duration = video.GetProcessingDuration();
+
+        // Assert
+        duration.Should().NotBeNull();
+        duration!.Value.TotalMilliseconds.Should().BeGreaterThanOrEqualTo(0);
+    }
+
+    [Fact]
+    public void GetProcessingDuration_ShouldReturnTimeSpan_WhenFailed()
+    {
+        // Arrange
+        var video = new VideoUpload("user", "video.mp4", "stored.mp4", "/path", 1000);
+        video.StartProcessing();
+        Thread.Sleep(50);
+        video.MarkAsFailed("Error occurred");
+
+        // Act
+        var duration = video.GetProcessingDuration();
+
+        // Assert
+        duration.Should().NotBeNull();
+        duration!.Value.Should().BeGreaterThanOrEqualTo(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowArgumentNullException_WhenUserIdIsNull()
+    {
+        // Act
+        var act = () => new VideoUpload(null!, "video.mp4", "stored.mp4", "/path", 1000);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("userId");
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowArgumentNullException_WhenOriginalFileNameIsNull()
+    {
+        // Act
+        var act = () => new VideoUpload("user", null!, "stored.mp4", "/path", 1000);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("originalFileName");
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowArgumentNullException_WhenStoredFileNameIsNull()
+    {
+        // Act
+        var act = () => new VideoUpload("user", "video.mp4", null!, "/path", 1000);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("storedFileName");
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowArgumentNullException_WhenFilePathIsNull()
+    {
+        // Act
+        var act = () => new VideoUpload("user", "video.mp4", "stored.mp4", null!, 1000);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("filePath");
+    }
 }
