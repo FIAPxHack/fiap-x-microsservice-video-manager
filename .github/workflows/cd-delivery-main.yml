@@ -1,32 +1,21 @@
-name: "[Etapa 2] Continuous Delivery - Main"
+name: "[Etapa 4] Continuous Delivery - Docker"
 
 on:
-  push:
+  workflow_run:
+    workflows: ["[Etapa 2] Main - Build, Test & SonarCloud Analysis"]
+    types:
+      - completed
     branches: [ "main" ]
 
 jobs:
-  build-test-deploy:
+  docker-deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Configurar .NET SDK 9.0
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Restaurar dependências
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Rodar Testes
-        run: dotnet test --no-build --configuration Release --verbosity normal
-
       - name: Login no Docker Hub
-        if: success()
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
