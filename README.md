@@ -14,7 +14,7 @@ Microsserviço responsável pelo **gerenciamento de vídeos**, incluindo upload,
 
 O **fiap-x-video-manager** é um microsserviço RESTful que gerencia o ciclo de vida de vídeos na plataforma FIAP X:
 
-### Funcionalidades Principais
+### Funcionalidades Principais 
 
 - ✅ **Upload de Vídeo** - Recebe vídeos via multipart/form-data e armazena no MinIO
 - ✅ **Listar Vídeos** - Retorna todos os vídeos de um usuário
