@@ -1,0 +1,27 @@
+﻿global:
+  scrape_interval: 15s       # com que frequência raspar alvos
+  evaluation_interval: 15s   # com que frequência avaliar regras de alerta
+  external_labels:
+    service: fiap-x-video-manager
+
+# Regras de alerta (arquivo separado)
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  # Métricas da própria API .NET
+  - job_name: "videomanager-api"
+    static_configs:
+      - targets: ["videomanager-api:8080"]
+    metrics_path: /metrics
+
+  # Métricas do PostgreSQL via postgres_exporter
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # Métricas do próprio Prometheus
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
