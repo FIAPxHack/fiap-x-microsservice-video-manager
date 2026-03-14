@@ -122,7 +122,7 @@ services:
     container_name: videomanager_postgres_exporter
     restart: unless-stopped
     environment:
-      DATA_SOURCE_NAME: "postgresql://postgres:postgres123@postgres:5432/videomanager_db?sslmode=disable"
+      DATA_SOURCE_NAME: ""
     depends_on:
       postgres:
         condition: service_healthy
