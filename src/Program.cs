@@ -1,6 +1,7 @@
 using Amazon.S3;
 using Amazon.Runtime;
 using Microsoft.EntityFrameworkCore;
+using Prometheus;
 using VideoManagerService.Application.Interfaces;
 using VideoManagerService.Application.UseCases;
 using VideoManagerService.Domain.Interfaces.Repositories;
@@ -20,7 +21,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new()
     {
-        Title = "FIAP X - Video Manager Service API",
+        Title = "FIAP-x - Video Manager Service API",
         Version = "2.0.0",
         Description = "Microsserviço gerenciador de vídeos com Clean Architecture e integração MinIO"
     });
@@ -136,8 +137,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.UseRouting();
+app.UseHttpMetrics(); // coleta métricas HTTP (latência, status codes, throughput)
 app.UseAuthorization();
 app.MapControllers();
+app.MapMetrics(); // expõe /metrics para o Prometheus raspar
 
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
