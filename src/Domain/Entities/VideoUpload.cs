@@ -49,6 +49,20 @@ public class VideoUpload
         UploadedAt = DateTime.UtcNow;
     }
 
+    // Construtor para testes ou reidratação com ID específico
+    public VideoUpload(
+        string id,
+        string userId,
+        string email,
+        string originalFileName,
+        string storedFileName,
+        string filePath,
+        long fileSizeBytes)
+        : this(userId, originalFileName, storedFileName, filePath, fileSizeBytes)
+    {
+        Id = id ?? throw new ArgumentNullException(nameof(id));
+    }
+
     /// <summary>
     /// Inicia o processamento do vídeo
     /// </summary>
