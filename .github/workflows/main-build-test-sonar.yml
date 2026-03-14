@@ -1,38 +1,33 @@
-name: "[Etapa 1] Pull Request"
+name: "[Etapa 2] Main - Build, Test & SonarCloud Analysis"
 
 on:
-  pull_request:
-    branches: [ "main" ]
-    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
 
 jobs:
   build-test-and-analyze:
+    name: Build, Test & Analyze
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout do repositório
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configurar .NET SDK 9.0
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restaurar dependências
+      - name: Restore dependencies
         run: dotnet restore
 
-      - name: Instalar SonarScanner para .NET
+      - name: Install SonarCloud Scanner
         run: dotnet tool install --global dotnet-sonarscanner
 
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
-      - name: Executar Análise SonarCloud
+      - name: Begin SonarCloud Analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -45,9 +40,12 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" \
             /d:sonar.coverage.exclusions="**/tests/**/*" \
             /d:sonar.exclusions="**/bin/**,**/obj/**,**/*.dll,**/*.exe,**/Migrations/**"
-          
-          dotnet build VideoManagerService.sln --configuration Release --no-incremental
-          
+
+      - name: Build for Analysis
+        run: dotnet build VideoManagerService.sln --configuration Release --no-incremental
+      
+      - name: Run Tests with Coverage
+        run: |
           dotnet test VideoManagerService.sln \
             --configuration Release \
             --no-build \
@@ -55,11 +53,22 @@ jobs:
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults \
             --settings coverlet.runsettings
-          
+      
+      - name: Debug Coverage Files
+        run: |
           echo "=== Locating coverage files ==="
           find ./TestResults -name "coverage.opencover.xml" -type f
-          
           echo "=== Checking file paths inside report ==="
           head -20 $(find ./TestResults -name "coverage.opencover.xml" -type f | head -1)
-          
-          dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+      - name: End SonarCloud Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: '**/TestResults/**/coverage.opencover.xml'
+          retention-days: 30
