@@ -16,8 +16,7 @@ O Video Manager Service atua como componente central no pipeline de processament
 - Notificação de erros via integração com serviço de notificação
 
 ## Arquitetura
-
-### Stack Tecnológica
+### Funcionalidades Principais 
 
 - **.NET 9.0** com **C# 12**
 - **ASP.NET Core** para API RESTful

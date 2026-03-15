@@ -1,0 +1,21 @@
+﻿global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    service: fiap-x-video-manager
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  # Métricas da API .NET (quando disponível)
+  - job_name: "videomanager-api"
+    static_configs:
+      - targets: ["host.docker.internal:5002"]
+    metrics_path: /metrics
+
+  # Métricas do próprio Prometheus
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+

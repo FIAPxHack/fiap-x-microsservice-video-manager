@@ -6,7 +6,7 @@
         <Configuration>
           <Format>opencover</Format>
           <Exclude>[*.Tests]*</Exclude>
-          <ExcludeByFile>**/bin/**,**/obj/**</ExcludeByFile>
+          <ExcludeByFile>**/bin/**,**/obj/**,**/Program.cs</ExcludeByFile>
           <IncludeTestAssembly>false</IncludeTestAssembly>
           <SingleHit>false</SingleHit>
           <UseSourceLink>false</UseSourceLink>
