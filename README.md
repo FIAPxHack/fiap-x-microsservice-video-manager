@@ -1,152 +1,177 @@
-# FIAP X - Microsserviço Gerenciador de Vídeos (Video Manager)
+# Video Manager Service
 
-[![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![C#](https://img.shields.io/badge/C%23-12.0-239120?logo=csharp&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/csharp/)
-[![Clean Architecture](https://img.shields.io/badge/Architecture-Clean-blue)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
-[![MinIO](https://img.shields.io/badge/Storage-MinIO-C72E49?logo=minio&logoColor=white)](https://min.io/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+Microsserviço responsável pelo gerenciamento de vídeos, incluindo upload, persistência, controle de status e disponibilização de frames processados.
 
-Microsserviço responsável pelo **gerenciamento de vídeos**, incluindo upload, controle de status e download de frames processados. Desenvolvido com **ASP.NET Core 9.0**, **C#**, **Clean Architecture** e **MinIO** para armazenamento.
+## Visão Geral
 
----
-
-## 📋 Sobre o Projeto
-
-O **fiap-x-video-manager** é um microsserviço RESTful que gerencia o ciclo de vida de vídeos na plataforma FIAP X:
-
-### Funcionalidades Principais 
-
-- ✅ **Upload de Vídeo** - Recebe vídeos via multipart/form-data e armazena no MinIO
-- ✅ **Listar Vídeos** - Retorna todos os vídeos de um usuário
-- ✅ **Consultar Status** - Verifica status de processamento (Pending, Processing, Completed, Failed)
-- ✅ **Atualizar Status** - Endpoint para callback do video-processor atualizar status
-- ✅ **Download de Frames** - Fornece arquivo ZIP com frames extraídos (do MinIO)
-- ✅ **Integração com Notification Service** - Notifica usuário sobre erros de processamento
-
-### Arquitetura de Processamento
-
-```
-┌──────────────┐      ┌──────────────┐      ┌──────────────┐
-│   Usuário    │─────▶│    Gateway   │─────▶│Video Manager │
-└──────────────┘      └──────────────┘      └──────┬───────┘
-                                                     │
-                                                     ▼
-                                              ┌──────────┐
-                                              │  MinIO   │ (Bucket)
-                                              └────┬─────┘
-                                                   │ Trigger/Queue
-                                                   ▼
-                                         ┌─────────────────┐
-                                         │Video Processor  │
-                                         │  (FFmpeg)       │
-                                         └────────┬────────┘
-                                                  │
-                                       ┌──────────┴─────────┐
-                                       ▼                    ▼
-                                  Frames no MinIO    Callback PUT Status
-```
+O Video Manager Service atua como componente central no pipeline de processamento de vídeos, coordenando o fluxo entre upload, armazenamento, processamento e distribuição de frames extraídos. Implementado seguindo os princípios de **Clean Architecture**, garante separação de responsabilidades e independência de frameworks.
 
 ### Responsabilidades
 
-1. **Upload**: Recebe vídeo → Salva no MinIO → Registra no banco (status: Pending)
-2. **Status**: Fornece informações sobre o vídeo e seu processamento
-3. **Callback**: Recebe atualização de status do video-processor
-4. **Download**: Fornece acesso aos frames processados (do MinIO)
-5. **Notificação**: Chama notification-service em caso de erro
+- Recepção e armazenamento de vídeos via object storage (MinIO)
+- Persistência de metadados em banco relacional (PostgreSQL)
+- Controle de ciclo de vida e status de processamento
+- Interface de callback para atualização de status pelo processador
+- Disponibilização de frames processados em formato compactado
+- Notificação de erros via integração com serviço de notificação
 
----
+## Arquitetura
+### Funcionalidades Principais 
 
-## 🏗️ Arquitetura Clean Architecture
+- **.NET 9.0** com **C# 12**
+- **ASP.NET Core** para API RESTful
+- **Entity Framework Core** para persistência
+- **PostgreSQL** como banco de dados
+- **MinIO** (S3-compatible) para object storage
+- **Swagger/OpenAPI** para documentação
+
+### Estrutura do Projeto
 
 ```
-┌─────────────────────────────────────────┐
-│     Presentation (Controllers, API)     │
-├─────────────────────────────────────────┤
-│    Application (Use Cases, DTOs)        │
-├─────────────────────────────────────────┤
-│    Domain (Entities, Interfaces)        │
-├─────────────────────────────────────────┤
-│    Infrastructure (MinIO, PostgreSQL)   │
-└─────────────────────────────────────────┘
+src/
+├── Domain/              # Entidades, enums, interfaces e exceções
+├── Application/         # DTOs, interfaces e casos de uso
+├── Infrastructure/      # Implementações de repositórios e serviços externos
+└── Presentation/        # Controllers e configurações da API
 ```
 
----
+### Diagrama de Fluxo
 
-## 🚀 Tecnologias
+```
+Cliente → Gateway → Video Manager → MinIO (armazenamento)
+                         ↓
+                    PostgreSQL (metadados)
+                         ↓
+                    Video Processor (callback)
+                         ↓
+                    Notification Service (erros)
+```
 
-- **.NET 9.0** - Runtime e Framework
-- **ASP.NET Core** - Web API
-- **Clean Architecture** - Separação de camadas
-- **PostgreSQL** - Banco de dados relacional
-- **MinIO** - Object Storage (S3-compatible)
-- **AWS SDK S3** - Cliente para MinIO
-- **Swagger/OpenAPI** - Documentação da API
+## Pré-requisitos
 
----
+- **.NET 9.0 SDK** ou superior
+- **Docker** e **Docker Compose** (para execução via container)
+- **PostgreSQL 16** (para execução local)
+- **MinIO** (para execução local)
 
-## 📦 Pré-requisitos
+## Como Executar
 
-1. **.NET 9.0 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/9.0)
-2. **Docker & Docker Compose** - [Download](https://www.docker.com/)
-
----
-
-## 🔧 Instalação e Execução
-
-### Usando Docker Compose (Recomendado)
+### Opção 1: Executar com Docker Compose (Recomendado)
 
 ```bash
-# Iniciar todos os serviços
+# 1. Navegar até o diretório do projeto
+cd Hackaton_Oficial/fiap-x-microsservice-video-manager
+
+# 2. Construir e iniciar todos os serviços (API, PostgreSQL, MinIO)
 docker-compose up -d
 
-# Ver logs
+# 3. Verificar logs (opcional)
 docker-compose logs -f videomanager-api
+
+# 4. Parar os serviços
+docker-compose down
 ```
 
-Serviços disponíveis:
-- **API**: http://localhost:5002
-- **Swagger**: http://localhost:5002/swagger
-- **MinIO Console**: http://localhost:9001 (minioadmin / minioadmin123)
-- **pgAdmin**: http://localhost:5050 (admin@fiapx.com / admin123)
+**Serviços disponíveis:**
+- API: `http://localhost:5002`
+- Swagger: `http://localhost:5002/swagger`
+- MinIO Console: `http://localhost:9001` (minioadmin / minioadmin123)
 
-### Executando Localmente
+### Opção 2: Executar Localmente
 
 ```bash
-cd src
+# 1. Restaurar dependências
 dotnet restore
+
+# 2. Navegar até o diretório do código-fonte
+cd src
+
+# 3. Executar a aplicação
 dotnet run
+
+# A API estará disponível em http://localhost:5002
 ```
 
-**Importante**: Configure PostgreSQL e MinIO localmente ou ajuste `appsettings.json`.
+**Nota:** Para execução local, configure PostgreSQL e MinIO manualmente ou ajuste as connection strings em `appsettings.json`.
 
----
+### Opção 3: Executar com Docker (API apenas)
 
-## 📡 Endpoints Principais
+```bash
+# 1. Construir a imagem Docker
+docker build -t fiapx-video-manager .
 
-### Upload de Vídeo
-```http
-POST /api/videos/upload
-Content-Type: multipart/form-data
-
-userId: string
-video: file
+# 2. Executar o container
+docker run -d -p 5002:8080 --name video-manager-api fiapx-video-manager
 ```
 
-### Listar Vídeos do Usuário
-```http
-GET /api/videos/user/{userId}
+### Verificar Funcionamento
+
+```bash
+# Testar se a API está respondendo
+curl http://localhost:5002/swagger
+
+# Ou acessar no navegador
+# http://localhost:5002/swagger
 ```
 
-### Consultar Status
-```http
-GET /api/videos/{videoId}/status
+## Endpoints
+
+### Documentação Completa
+Acesse `http://localhost:5002/swagger` para documentação interativa completa.
+
+### Resumo dos Endpoints
+
+#### 📤 Upload de Vídeo
+**Endpoint:** `POST /api/videos/upload`  
+**Content-Type:** `multipart/form-data`
+
+**Parâmetros:**
+- `userId` (string): ID do usuário
+- `video` (file): Arquivo de vídeo
+
+**Response (200 OK):**
+```json
+{
+  "videoId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "fileName": "video.mp4",
+  "status": "Pending"
+}
 ```
 
-### Atualizar Status (Callback do Processor)
-```http
-PUT /api/videos/{videoId}/status
-Content-Type: application/json
+#### 📋 Listar Vídeos do Usuário
+**Endpoint:** `GET /api/videos/user/{userId}`
 
+**Response (200 OK):**
+```json
+[
+  {
+    "videoId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "fileName": "video.mp4",
+    "uploadedAt": "2026-03-15T10:30:00Z",
+    "status": "Completed",
+    "frameCount": 120
+  }
+]
+```
+
+#### 📊 Consultar Status
+**Endpoint:** `GET /api/videos/{videoId}/status`
+
+**Response (200 OK):**
+```json
+{
+  "videoId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "status": "Completed",
+  "frameCount": 120,
+  "processedAt": "2026-03-15T10:35:00Z"
+}
+```
+
+#### 🔄 Atualizar Status (Callback)
+**Endpoint:** `PUT /api/videos/{videoId}/status`
+
+**Request Body:**
+```json
 {
   "status": "Completed",
   "zipFileName": "frames.zip",
@@ -155,127 +180,73 @@ Content-Type: application/json
 }
 ```
 
-### Download de Frames
-```http
-GET /api/videos/{videoId}/download
-```
+#### 📥 Download de Frames
+**Endpoint:** `GET /api/videos/{videoId}/download`
 
----
+**Response:** Arquivo ZIP com frames processados
 
-## 🗄️ Armazenamento MinIO
+## Armazenamento
 
-O serviço utiliza **MinIO** como object storage para:
-- Armazenar vídeos enviados pelos usuários
-- Armazenar frames processados pelo video-processor
-- Compatibilidade com AWS S3 (fácil migração para produção)
+### PostgreSQL - Metadados
+Armazena informações sobre os vídeos:
+- ID, nome do arquivo, usuário
+- Status de processamento
+- Timestamps de upload e processamento
+- Quantidade de frames e localização no MinIO
 
-### Estrutura do Bucket
-
+### MinIO - Object Storage
+Estrutura de buckets:
 ```
 fiapx-videos/
-├── uploads/
+├── uploads/           # Vídeos originais enviados
 │   └── {timestamp}_{guid}.mp4
-└── outputs/
+└── outputs/           # Frames processados
     └── {videoId}/
         └── frames_{videoId}.zip
 ```
 
----
+## Configuração
 
-## 🔗 Integração com Outros Serviços
+Arquivo `appsettings.json`:
 
-### Video Processor (Desenvolvido pela equipe)
-- Consome fila de vídeos pendentes
-- Baixa vídeo do MinIO
-- Processa com FFmpeg (extrai frames)
-- Faz upload dos frames para MinIO
-- **Chama PUT /api/videos/{id}/status** para atualizar
-
-### Notification Service
-- Chamado em caso de erro no processamento
-- Envia e-mail para o usuário
-
-### Gateway
-- Roteia todas as requisições
-- Aplica autenticação JWT
-- Políticas de autorização
-
----
-
-## 🧪 Testes
-
-```bash
-cd tests
-dotnet test
-```
-
----
-
-## 📝 Variáveis de Ambiente
-
-```env
-ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=videomanager_db;...
-MinIO__Endpoint=minio:9000
-MinIO__AccessKey=minioadmin
-MinIO__SecretKey=minioadmin123
-MinIO__BucketName=fiapx-videos
-MinIO__UseSSL=false
-Services__NotificationService__Url=http://notification-api:8080
-```
-
----
-
-## 📄 Licença
-
-MIT License - Ver arquivo [LICENSE](LICENSE)
-
----
-
-## 👥 Equipe
-
-Projeto desenvolvido para a pós-graduação FIAP - Arquitetura de Microsserviços
-
-### Upload de Vídeo
-```http
-POST /api/videos/upload
-Content-Type: multipart/form-data
-```
-
-### Listar Vídeos do Usuário
-```http
-GET /api/videos/user/{userId}
-```
-
-### Consultar Status
-```http
-GET /api/videos/{videoId}/status
-```
-
-### Download de Frames
-```http
-GET /api/videos/{videoId}/download
-```
-
----
-
-## 🔗 Integração
-
-O serviço se integra com:
-- **Notification Service** (porta 5001) - Para envio de emails
-
-Configurar em `appsettings.json`:
 ```json
 {
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=postgres;Port=5432;Database=videomanager_db;Username=postgres;Password=postgres123"
+  },
+  "MinIO": {
+    "Endpoint": "minio:9000",
+    "AccessKey": "minioadmin",
+    "SecretKey": "minioadmin123",
+    "BucketName": "fiapx-videos",
+    "UseSSL": false
+  },
   "Services": {
     "NotificationService": {
-      "Url": "http://localhost:5001"
+      "Url": "http://notification-api:8080"
     }
   }
 }
 ```
 
----
+## Testes
 
-## 📝 Licença
+### Executar Testes Unitários
 
-MIT License - Projeto FIAP X Pós-Graduação
+```bash
+# Navegar até o diretório de testes
+cd tests
+
+# Executar todos os testes
+dotnet test
+
+# Executar com cobertura de código
+dotnet test --collect:"XPlat Code Coverage"
+
+# Gerar relatório de cobertura (se coverlet estiver configurado)
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+```
+
+## Licença
+
+MIT License
